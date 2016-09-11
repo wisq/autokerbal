@@ -30,18 +30,20 @@ Kerbal.thread 'heat_limiter', paused: true do
       max_ratio = heat_ratios.flatten.max
 
       if max_ratio > 0.8
-        throttle = 1.0 - 10 * (0.9 - max_ratio)
-        puts "Reducing throttle due to heat."
+        # Keep heat in the range of 80% to 90%.
+        reduction = 10 * (max_ratio - 0.8)
+        throttle = 1.0 - reduction
+        puts "Reducing throttle due to heat." unless throttled
         @control.throttle = [0, throttle].max
         throttled = true
       elsif throttled
         puts "Resuming max throttle."
         @control.throttle = 1.0
         throttled = false
+      else
+        sleep(0.5)
       end
     end
-
-    sleep(0.3)
   end
 end
 
