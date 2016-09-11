@@ -185,6 +185,16 @@ class Kerbal
       @space_center.rails_warp_factor = 0 if warp_mode == :rails
     end
 
+    def realchute(part)
+      part.modules.select { |m| m.name == 'RealChuteModule' }.first
+    end
+
+    def parts_below(part)
+      return part.children.map do |child|
+        [child] + parts_below(child)
+      end.flatten(1)
+    end
+
     # TODO: staging
     def calculate_time_for_burn(delta_v)
       f   = @vessel.available_thrust
@@ -225,6 +235,10 @@ class Kerbal
           end
         end
       end
+    end
+
+    def sleep_ut(seconds)
+      sleep(seconds.to_f / @space_center.warp_rate)
     end
   end
 end

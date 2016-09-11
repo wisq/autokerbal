@@ -18,21 +18,6 @@ ORBIT_ALTITUDE = 100000   # target orbit altitude
 ABORT_ALTITUDE_MAX = 50000 # cut throttle if alt below this & decreasing
 ABORT_ALTITUDE_MIN = 10000 # omg we're gonna crash
 
-Kerbal.thread 'autostage', paused: true do
-  loop do
-    if @control.current_stage <= 1
-      break
-    elsif FLYING_STATES.include?(@vessel.situation) \
-        && @control.throttle > 0.0 \
-        && @vessel.available_thrust == 0
-      @control.activate_next_stage
-      sleep(0.5)
-    else
-      sleep(0.2)
-    end
-  end
-end
-
 Kerbal.thread 'heat_limiter', paused: true do
   throttled = false
 
@@ -291,6 +276,7 @@ end
 
 Kerbal.load_file('descent.rb')
 Kerbal.load_file('burn.rb')
+Kerbal.load_file('autostage.rb')
 
 def plot_circular_node
   mu = @vessel.orbit.body.gravitational_parameter
