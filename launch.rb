@@ -6,6 +6,9 @@ require 'set'
 
 FLYING_STATES = Set.new [:flying, :orbiting, :escaping, :sub_orbital]
 
+WAIT_FOR_LONGITUDE = nil  # if set, wait for longitude of ascending node
+WAIT_ALLOW_INVERTED = true  # allow launching at descending node, if sooner
+
 HEADING = 90  # degrees on compass
 INITIAL_SPEED = 50  # speed to begin gravity turn
 INITIAL_PITCH = 70  # pitch for initial gravity turn
@@ -125,10 +128,62 @@ Kerbal.thread 'launch' do
   svel_flight = @vessel.flight(@vessel.surface_velocity_reference_frame)
   surface_flight = @vessel.flight(@vessel.surface_reference_frame)
 
+  @space_center.save('prelaunch')
+
+  target_heading = HEADING
+  if WAIT_FOR_LONGITUDE
+    puts "Waiting until vessel is under #{WAIT_FOR_LONGITUDE} longitude."
+    target_longitude = WAIT_FOR_LONGITUDE
+    degrees_needed, time = time_to_longitude(WAIT_FOR_LONGITUDE)
+
+    puts
+    puts "Degrees until longitude: #{degrees_needed}"
+    puts "Time until longitude: #{time} seconds"
+    puts "Target heading: #{target_heading}"
+    puts
+
+    if degrees_needed > 180 && WAIT_ALLOW_INVERTED
+      target_longitude = (WAIT_FOR_LONGITUDE + 180) % 360
+      puts "Will launch at descending node instead (#{target_longitude} degrees)."
+      degrees_needed, time = time_to_longitude(target_longitude)
+
+      target_heading = (90 - (target_heading - 90)) % 360
+
+      puts
+      puts "Degrees until longitude: #{degrees_needed}"
+      puts "Time until longitude: #{time} seconds"
+      puts "Target heading: #{target_heading}"
+      puts
+    end
+
+    time_ut = @space_center.ut + time
+
+    5.downto(1) do |n|
+      puts "Warping in #{n} ..."
+      sleep(1)
+    end
+
+    @space_center.warp_to(time_ut - 11.0)
+    dewarp
+    sleep(1)
+
+    degrees, time = time_to_longitude(target_longitude)
+    countdown_ut = @space_center.ut + time - 5.0
+    puts "Degrees until longitude: #{degrees_needed}"
+    puts "Time until longitude: #{time} seconds"
+    raise "ERROR: Warped too far!" if time < 6.0
+    raise "ERROR: Not enough warp!" if time > 20.0
+
+    puts "Beginning countdown in %.2f seconds." % [countdown_ut - @space_center.ut]
+    sleep(0.1) until @space_center.ut >= countdown_ut
+  else
+    dewarp
+  end
+
   @control.sas = false
   @control.throttle = 1.0
 
-  @autopilot.target_heading = HEADING
+  @autopilot.target_heading = target_heading
   @autopilot.target_pitch = 90
   @autopilot.target_roll = 0
   @autopilot.engage
@@ -262,6 +317,27 @@ def calculate_time_for_burn(delta_v)
   burn_time = (m0 - m1) / flow_rate
 
   return burn_time
+end
+
+def time_to_longitude(target)
+  body = @vessel.orbit.body
+  flight = @vessel.flight(body.non_rotating_reference_frame)
+
+  # Get the angle of the planet relative to its fixed, non-rotating plane.
+  offset = Vector[*@space_center.transform_position(
+    [1, 0, 0], body.reference_frame, body.non_rotating_reference_frame)]
+  north = Vector[1, 0, 0]
+  angle = north.angle_with(offset) * 180 / Math::PI
+  angle = -angle if offset[2] < 0
+
+  # Add that to our current longitude to get our non-rotated longitude
+  current = angle + flight.longitude
+
+  needed = target - current
+  needed += 360 if needed < 0
+  speed = body.rotational_speed * 180 / Math::PI
+  time = needed / speed
+  return needed, time
 end
 
 Kerbal.run
