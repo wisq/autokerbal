@@ -195,32 +195,33 @@ Kerbal.thread 'launch' do
 
   puts "Initial vertical ascent complete.  Tilting to #{INITIAL_PITCH} ..."
   @autopilot.target_pitch = INITIAL_PITCH
-  @autopilot.engage
-
-  with_stream(surface_flight.pitch_stream) do |pitch|
-    wait_for = 90 - (90-INITIAL_PITCH)/2 # halfway to correct pitch
-    until pitch.get < wait_for
-      sleep(0.1)
-    end
     puts "Tilt in progress; pitch at #{wait_for} degrees."
   end
 
-  with_stream(svel_flight.pitch_stream) do |pitch|
-    puts "Waiting for #{ASCENT_AOA} degrees AoA ..."
-    until pitch.get >= ASCENT_AOA
-      sleep(0.1)
+  with_stream(surface_flight.pitch_stream) do |surface_pitch_stream|
+    with_stream(svel_flight.pitch_stream) do |svel_pitch_stream|
+      puts "Waiting for #{ASCENT_AOA} degrees AoA ..."
+
+      loop do
+        current_pitch = surface_pitch_stream.get
+        svel_pitch = current_pitch - svel_pitch_stream.get
+        target_pitch = svel_pitch + ASCENT_AOA
+
+        if waiting && current_pitch > target_pitch
+          puts "Maintaining #{ASCENT_AOA} degrees AoA for ascent."
+          puts "Waiting for #{ORBIT_ALTITUDE}m apoapsis ..."
+          waiting = false
+        end
+
+        unless waiting
+          @autopilot.target_pitch = target_pitch
+          @autopilot.target_heading = target_heading
+          @autopilot.engage
+        end
+
+        sleep_ut(0.1)
+      end
     end
-  end
-
-  puts "Maintaining #{ASCENT_AOA} degrees AoA for ascent."
-  puts "Waiting for #{ORBIT_ALTITUDE}m apoapsis ..."
-
-  loop do
-    @autopilot.reference_frame = @vessel.surface_velocity_reference_frame
-    @autopilot.target_direction = [0,1,0] # prograde
-    @autopilot.target_pitch = ASCENT_AOA
-    @autopilot.engage
-    sleep(1)
   end
 end
 
