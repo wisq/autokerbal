@@ -54,6 +54,7 @@ Kerbal.thread 'burn' do
   end
 
   fine_tuning = false
+  no_engines = false
   loop do
     vector = burn_node.remaining_burn_vector(burn_node.reference_frame)
     burn_complete = vector[1] <= 0
@@ -67,6 +68,15 @@ Kerbal.thread 'burn' do
     throttle = 1.0
 
     remaining_burn = calculate_time_for_burn(delta_v)
+    if remaining_burn.nil?
+      puts "WARNING: No engines available!" unless no_engines
+      no_engines = true
+      next
+    elsif no_engines
+      puts "Thrust restored!  Continuing burn." if no_engines
+      no_engines = false
+    end
+
     if remaining_burn < 1.0
       puts "Fine-tuning burn ..." unless fine_tuning
       fine_tuning = true
