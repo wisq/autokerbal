@@ -11,7 +11,7 @@ WAIT_ALLOW_INVERTED = true  # allow launching at descending node, if sooner
 
 HEADING = 90  # degrees on compass
 INITIAL_SPEED = 50  # speed to begin gravity turn
-INITIAL_PITCH = 70  # pitch for initial gravity turn
+INITIAL_PITCH = 80  # pitch for initial gravity turn
 ASCENT_AOA = 3  # angle of attack during ascent
 ORBIT_ALTITUDE = 100000   # target orbit altitude
 
@@ -109,7 +109,7 @@ end
 
 Kerbal.thread 'launch' do
   situation = @vessel.situation
-  raise "Already launched: #{situation}" unless situation == :pre_launch
+  raise "Already launched: #{situation}" unless [:pre_launch, :landed].include?(situation)
 
   body_flight = @vessel.flight(@vessel.orbit.body.reference_frame)
   svel_flight = @vessel.flight(@vessel.surface_velocity_reference_frame)
