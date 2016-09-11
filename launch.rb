@@ -18,95 +18,6 @@ ORBIT_ALTITUDE = 100000   # target orbit altitude
 ABORT_ALTITUDE_MAX = 50000 # cut throttle if alt below this & decreasing
 ABORT_ALTITUDE_MIN = 10000 # omg we're gonna crash
 
-Kerbal.thread 'heat_limiter', paused: true do
-  throttled = false
-
-  loop do
-    if @control.throttle > 0.0
-      heat_ratios = @vessel.parts.all.map do |part|
-        [part.temperature / part.max_temperature,
-         part.skin_temperature / part.max_skin_temperature]
-      end
-      max_ratio = heat_ratios.flatten.max
-
-      if max_ratio > 0.8
-        # Keep heat in the range of 80% to 90%.
-        reduction = 10 * (max_ratio - 0.8)
-        throttle = 1.0 - reduction
-        puts "Reducing throttle due to heat." unless throttled
-        @control.throttle = [0, throttle].max
-        throttled = true
-      elsif throttled
-        puts "Resuming max throttle."
-        @control.throttle = 1.0
-        throttled = false
-      else
-        sleep(0.5)
-      end
-    end
-  end
-end
-
-Kerbal.thread 'reentry', paused: true do
-  body = @vessel.orbit.body
-  atmosphere_depth = body.atmosphere_depth
-  flight = @vessel.flight(body.reference_frame)
-  old_in_space = nil
-
-  until flight.mean_altitude > atmosphere_depth
-    sleep(5)
-  end
-
-  puts "Now in space; watching for reentry."
-  until flight.mean_altitude < atmosphere_depth
-    sleep(1)
-  end
-
-  if Kerbal.thread_running?('launch')
-    puts "Reentry detected.  Aborting launch."
-  elsif Kerbal.thread_running?('circular')
-    puts "Reentry detected.  Aborting circularisation."
-  else
-    puts "Reentry detected."
-  end
-  Kerbal.kill_other_threads
-  Kerbal.start_thread('descent')
-end
-
-Kerbal.thread 'launch_abort', paused: true do
-  flight = @vessel.flight(@vessel.orbit.body.reference_frame)
-  altitude_stream = flight.mean_altitude_stream
-
-  last_altitude = altitude_stream.get
-  decrease_times = 0
-  loop do
-    altitude = altitude_stream.get
-    if altitude > last_altitude
-      decrease_times = 0
-    elsif altitude < last_altitude
-      decrease_times += 1
-      break if decrease_times >= 10 && altitude < ABORT_ALTITUDE_MAX
-    end
-    last_altitude = altitude
-    sleep(0.2)
-  end
-
-  puts "Altitude decreasing!  Aborting launch!"
-  Kerbal.kill_other_threads
-
-  @control.throttle = 0
-  emergency = false
-  puts "Waiting for zero thrust ..."
-  until @vessel.thrust == 0.0
-    if altitude_stream.get < ABORT_ALTITUDE_MIN
-      puts "Altitude too low!  Emergency abort!"
-    end
-    sleep(0.2)
-  end
-
-  Kerbal.start_thread('descent')
-end
-
 Kerbal.thread 'launch' do
   situation = @vessel.situation
   raise "Already launched: #{situation}" unless [:pre_launch, :landed].include?(situation)
@@ -279,6 +190,96 @@ Kerbal.thread 'circular', paused: true do
 
   Kerbal.kill_thread('autostage')
 end
+
+Kerbal.thread 'heat_limiter', paused: true do
+  throttled = false
+
+  loop do
+    if @control.throttle > 0.0
+      heat_ratios = @vessel.parts.all.map do |part|
+        [part.temperature / part.max_temperature,
+         part.skin_temperature / part.max_skin_temperature]
+      end
+      max_ratio = heat_ratios.flatten.max
+
+      if max_ratio > 0.8
+        # Keep heat in the range of 80% to 90%.
+        reduction = 10 * (max_ratio - 0.8)
+        throttle = 1.0 - reduction
+        puts "Reducing throttle due to heat." unless throttled
+        @control.throttle = [0, throttle].max
+        throttled = true
+      elsif throttled
+        puts "Resuming max throttle."
+        @control.throttle = 1.0
+        throttled = false
+      else
+        sleep(0.5)
+      end
+    end
+  end
+end
+
+Kerbal.thread 'reentry', paused: true do
+  body = @vessel.orbit.body
+  atmosphere_depth = body.atmosphere_depth
+  flight = @vessel.flight(body.reference_frame)
+  old_in_space = nil
+
+  until flight.mean_altitude > atmosphere_depth
+    sleep(5)
+  end
+
+  puts "Now in space; watching for reentry."
+  until flight.mean_altitude < atmosphere_depth
+    sleep(1)
+  end
+
+  if Kerbal.thread_running?('launch')
+    puts "Reentry detected.  Aborting launch."
+  elsif Kerbal.thread_running?('circular')
+    puts "Reentry detected.  Aborting circularisation."
+  else
+    puts "Reentry detected."
+  end
+  Kerbal.kill_other_threads
+  Kerbal.start_thread('descent')
+end
+
+Kerbal.thread 'launch_abort', paused: true do
+  flight = @vessel.flight(@vessel.orbit.body.reference_frame)
+  altitude_stream = flight.mean_altitude_stream
+
+  last_altitude = altitude_stream.get
+  decrease_times = 0
+  loop do
+    altitude = altitude_stream.get
+    if altitude > last_altitude
+      decrease_times = 0
+    elsif altitude < last_altitude
+      decrease_times += 1
+      break if decrease_times >= 10 && altitude < ABORT_ALTITUDE_MAX
+    end
+    last_altitude = altitude
+    sleep(0.2)
+  end
+
+  puts "Altitude decreasing!  Aborting launch!"
+  Kerbal.kill_other_threads
+
+  @control.throttle = 0
+  emergency = false
+  puts "Waiting for zero thrust ..."
+  until @vessel.thrust == 0.0
+    if altitude_stream.get < ABORT_ALTITUDE_MIN
+      puts "Altitude too low!  Emergency abort!"
+    end
+    sleep(0.2)
+  end
+
+  Kerbal.start_thread('descent')
+end
+
 
 Kerbal.load_file('descent.rb')
 Kerbal.load_file('burn.rb')
