@@ -235,9 +235,19 @@ Kerbal.thread 'apoapsis', paused: true do
 
   puts "Cutting throttle."
   @control.throttle = 0
-
-  Kerbal.kill_thread('launch')
   Kerbal.kill_thread('heat_limiter')
+
+  body = @vessel.orbit.body
+  atmosphere_depth = body.atmosphere_depth
+  body_flight = @vessel.flight(body.reference_frame)
+
+  puts "Waiting for exit from atmosphere ..."
+  until body_flight.mean_altitude > atmosphere_depth
+    sleep(1)
+  end
+
+  puts "Now in space!"
+  Kerbal.kill_thread('launch')
   Kerbal.start_thread('circular')
 end
 
@@ -246,13 +256,6 @@ Kerbal.thread 'circular', paused: true do
   surface_height = body.equatorial_radius
   atmosphere_depth = body.atmosphere_depth
 
-  body_flight = @vessel.flight(body.reference_frame)
-  puts "Waiting for exit from atmosphere ..."
-  until body_flight.mean_altitude > atmosphere_depth
-    sleep(1)
-  end
-
-  puts "Now in space!"
   Kerbal.kill_thread('launch_abort')
   Kerbal.start_thread('reentry')
 
