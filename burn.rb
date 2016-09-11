@@ -46,7 +46,7 @@ Kerbal.thread 'burn' do
   else
     puts "Unable to turn to burn direction in time!"
     5.downto(1) do |n|
-      puts "Emergency burn in #{n} ..."
+      puts "Emergency burn in #{n} ...\007"
       sleep(1)
     end
     puts "Initiating emergency burn!"
