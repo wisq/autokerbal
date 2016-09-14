@@ -22,6 +22,7 @@ Kerbal.thread 'burn' do
   @autopilot.reference_frame = burn_node.reference_frame
   vector = burn_node.remaining_burn_vector(burn_node.reference_frame)
   @autopilot.target_direction = vector
+  @autopilot.stopping_time = [4.0, 4.0, 4.0]
   @autopilot.engage
   sleep(0.5)
   success = autopilot_wait_until(burn_ut - BURN_EMERGENCY_GRACE)
@@ -53,6 +54,7 @@ Kerbal.thread 'burn' do
     emergency_burn = true
   end
 
+  @autopilot.stopping_time = [0.5, 0.5, 0.5] # back to default
   fine_tuning = false
   no_engines = false
   loop do

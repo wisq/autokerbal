@@ -43,6 +43,7 @@ Kerbal.thread 'descent', paused: true do
   puts "Turning to surface retrograde ..."
   @autopilot.reference_frame = @vessel.surface_velocity_reference_frame
   @autopilot.target_direction = [0,-1,0]
+  @autopilot.stopping_time = [0.5, 0.5, 0.5] # the default
   @autopilot.engage
 
   with_stream(flight.mean_altitude_stream) do |alt_stream|

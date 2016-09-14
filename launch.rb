@@ -82,6 +82,7 @@ Kerbal.thread 'launch' do
   @control.throttle = 1.0
 
   @autopilot.target_heading = target_heading
+  @autopilot.stopping_time = [0.5, 0.5, 0.5] # the default
   @autopilot.target_pitch = 90
   @autopilot.target_roll = 0
   @autopilot.engage
