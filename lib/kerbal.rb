@@ -240,5 +240,13 @@ class Kerbal
     def sleep_ut(seconds)
       sleep(seconds.to_f / @space_center.warp_rate)
     end
+
+    def deg2rad(deg)
+      return deg * Math::PI / 180.0
+    end
+
+    def rad2deg(rad)
+      return rad * 180 / Math::PI
+    end
   end
 end

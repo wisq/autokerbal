@@ -6,10 +6,9 @@ require 'set'
 
 FLYING_STATES = Set.new [:flying, :orbiting, :escaping, :sub_orbital]
 
-WAIT_FOR_LONGITUDE = nil  # if set, wait for longitude of ascending node
 WAIT_ALLOW_INVERTED = true  # allow launching at descending node, if sooner
 
-HEADING = 90  # degrees on compass
+HEADING = 90  # degrees on compass (if no target selected)
 INITIAL_SPEED = 50  # speed to begin gravity turn
 INITIAL_PITCH = 80  # pitch for initial gravity turn
 ASCENT_AOA = 3  # angle of attack during ascent
@@ -26,38 +25,59 @@ Kerbal.thread 'launch' do
   svel_flight = @vessel.flight(@vessel.surface_velocity_reference_frame)
   surface_flight = @vessel.flight(@vessel.surface_reference_frame)
 
+  dewarp
   @space_center.save('prelaunch')
 
-  target_heading = HEADING
-  if WAIT_FOR_LONGITUDE
-    puts "Waiting until vessel is under #{WAIT_FOR_LONGITUDE} longitude."
-    target_longitude = WAIT_FOR_LONGITUDE
-    degrees_needed, time = time_to_longitude(WAIT_FOR_LONGITUDE)
+  @vessel.parts.modules_with_name('ModuleResourceConverter').each do |mod|
+    next unless mod.part.launch_clamp
+    next unless mod.has_event('Start Pumping Fuel')
+    puts "Enabling fuel pumping: #{mod.part.title}"
+    mod.trigger_event('Start Pumping Fuel')
+  end
+
+  initial_heading = HEADING
+  target = @space_center.target_body || @space_center.target_vessel
+  # Orbit inclination is supposed to be returned as radians,
+  # but the current version converts the wrong way (rad2deg).
+  # A single deg2rad will give us the degrees inclination.
+  # FIXME: Change this to rad2deg once the bug is fixed.
+  target_inclination = deg2rad(target.orbit.inclination) if target
+
+  if target && target_inclination > 0.5
+    target_longitude = rad2deg(target.orbit.longitude_of_ascending_node)
+    initial_heading = HEADING - target_inclination
+
+    puts "Target: #{target.name}"
+    puts "Inclination: #{target_inclination}"
+    puts "Longitude of ascending node: #{target_longitude}"
+    puts
+    puts "Waiting until vessel is under #{target_longitude} longitude."
+    degrees_needed, time = time_to_longitude(target_longitude)
 
     puts
     puts "Degrees until longitude: #{degrees_needed}"
     puts "Time until longitude: #{time} seconds"
-    puts "Target heading: #{target_heading}"
+    puts "Launch heading: #{initial_heading}"
     puts
 
     if degrees_needed > 180 && WAIT_ALLOW_INVERTED
-      target_longitude = (WAIT_FOR_LONGITUDE + 180) % 360
+      target_longitude = (target_longitude + 180) % 360
       puts "Will launch at descending node instead (#{target_longitude} degrees)."
       degrees_needed, time = time_to_longitude(target_longitude)
 
-      target_heading = (90 - (target_heading - 90)) % 360
+      initial_heading = HEADING + target_inclination
 
       puts
       puts "Degrees until longitude: #{degrees_needed}"
       puts "Time until longitude: #{time} seconds"
-      puts "Target heading: #{target_heading}"
+      puts "Launch heading: #{initial_heading}"
       puts
     end
 
     time_ut = @space_center.ut + time
 
     5.downto(1) do |n|
-      puts "Warping in #{n} ..."
+      puts "Warping in #{n} ...\007"
       sleep(1)
     end
 
@@ -74,15 +94,13 @@ Kerbal.thread 'launch' do
 
     puts "Beginning countdown in %.2f seconds." % [countdown_ut - @space_center.ut]
     sleep(0.1) until @space_center.ut >= countdown_ut
-  else
-    dewarp
   end
 
   @control.sas = false
   @control.throttle = 1.0
 
-  @autopilot.target_heading = target_heading
   @autopilot.stopping_time = [0.5, 0.5, 0.5] # the default
+  @autopilot.target_heading = initial_heading
   @autopilot.target_pitch = 90
   @autopilot.target_roll = 0
   @autopilot.engage
@@ -321,15 +339,15 @@ def time_to_longitude(target)
   offset = Vector[*@space_center.transform_position(
     [1, 0, 0], body.reference_frame, body.non_rotating_reference_frame)]
   north = Vector[1, 0, 0]
-  angle = north.angle_with(offset) * 180 / Math::PI
+  angle = rad2deg(north.angle_with(offset))
   angle = -angle if offset[2] < 0
 
   # Add that to our current longitude to get our non-rotated longitude
-  current = angle + flight.longitude
+  current = (angle + flight.longitude) % 360
 
   needed = target - current
   needed += 360 if needed < 0
-  speed = body.rotational_speed * 180 / Math::PI
+  speed = rad2deg(body.rotational_speed)
   time = needed / speed
   return needed, time
 end
