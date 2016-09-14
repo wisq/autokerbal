@@ -137,19 +137,18 @@ Kerbal.thread 'launch' do
 
   puts "Initial vertical ascent complete.  Tilting to #{INITIAL_PITCH} ..."
   @autopilot.target_pitch = INITIAL_PITCH
-    puts "Tilt in progress; pitch at #{wait_for} degrees."
-  end
 
   with_stream(surface_flight.pitch_stream) do |surface_pitch_stream|
     with_stream(svel_flight.pitch_stream) do |svel_pitch_stream|
       puts "Waiting for #{ASCENT_AOA} degrees AoA ..."
+      waiting = true
 
       loop do
         current_pitch = surface_pitch_stream.get
         svel_pitch = current_pitch - svel_pitch_stream.get
         target_pitch = svel_pitch + ASCENT_AOA
 
-        if waiting && current_pitch > target_pitch
+        if waiting && target_pitch <= INITIAL_PITCH
           puts "Maintaining #{ASCENT_AOA} degrees AoA for ascent."
           puts "Waiting for #{ORBIT_ALTITUDE}m apoapsis ..."
           waiting = false
@@ -157,7 +156,7 @@ Kerbal.thread 'launch' do
 
         unless waiting
           @autopilot.target_pitch = target_pitch
-          @autopilot.target_heading = target_heading
+          @autopilot.target_heading = initial_heading
           @autopilot.engage
         end
 
