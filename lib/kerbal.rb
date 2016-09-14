@@ -65,6 +65,10 @@ class Kerbal
     start_thread(name) unless paused || instance.loading_file?
   end
 
+  def self.execute(name, &block)
+    KerbalThread.new(name).run(block)
+  end
+
   def self.start_thread(name)
     instance.start_or_queue(name)
   end
