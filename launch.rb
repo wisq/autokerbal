@@ -97,7 +97,7 @@ Kerbal.thread 'launch' do
   end
 
   @control.sas = false
-  @control.throttle = 1.0
+  @control.throttle = 0.0
 
   @autopilot.stopping_time = [0.5, 0.5, 0.5] # the default
   @autopilot.target_heading = initial_heading
@@ -110,7 +110,19 @@ Kerbal.thread 'launch' do
     sleep(1)
   end
   puts "LAUNCH!"
-  @control.activate_next_stage
+
+  found_engine = false
+  current_stage = @control.current_stage
+  @vessel.parts.modules_with_name('ModuleEnginesFX').each do |mod|
+    if mod.has_event('Activate Engine') && mod.part.stage == current_stage
+      puts "Activating engine: #{mod.part.title}"
+      mod.trigger_event('Activate Engine')
+      found_engine = true
+    end
+  end
+  @control.activate_next_stage unless found_engine
+
+  @control.throttle = 1.0
 
   Kerbal.start_thread('autostage')
   Kerbal.start_thread('launch_abort')
