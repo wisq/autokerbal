@@ -1,4 +1,4 @@
 source 'https://rubygems.org'
 
-gem 'krpc', :path => 'gem'
+gem 'krpc', :github => 'TeWu/krpc-rb'
 gem 'pry'

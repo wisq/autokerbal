@@ -1,5 +1,6 @@
-PATH
-  remote: gem
+GIT
+  remote: git://github.com/TeWu/krpc-rb.git
+  revision: ed42974b66160be2af83af0a1e78a9da6f6b356c
   specs:
     krpc (0.3.1)
       colorize (~> 0.7)
@@ -11,17 +12,19 @@ GEM
   remote: https://rubygems.org/
   specs:
     coderay (1.1.0)
-    colorize (0.7.7)
-    google-protobuf (3.0.0.alpha.5.0.5.1)
+    colorize (0.8.1)
+    google-protobuf (3.0.0)
     haml (3.0.25)
     hanna-nouveau (0.4.2)
       haml (= 3.0.25)
       rdoc (~> 4.0)
     json (1.8.3)
     method_source (0.8.2)
-    mini_portile2 (2.0.0)
-    nokogiri (1.6.7.2)
-      mini_portile2 (~> 2.0.0.rc2)
+    mini_portile2 (2.1.0)
+    nokogiri (1.6.8)
+      mini_portile2 (~> 2.1.0)
+      pkg-config (~> 1.1.7)
+    pkg-config (1.1.7)
     pry (0.10.1)
       coderay (~> 1.1.0)
       method_source (~> 0.8.1)
