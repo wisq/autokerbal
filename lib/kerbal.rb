@@ -3,8 +3,32 @@ require 'krpc'
 require 'pry'
 require 'matrix'
 require 'singleton'
+require 'yaml'
+require 'pathname'
 
 PROGRAM = File.basename($0, ".rb")
+
+def _symbolify_keys(hash)
+  return hash.map do |key, value|
+    if value.kind_of?(Hash)
+      value = _symbolify_keys(value)
+    end
+    [key.to_sym, value]
+  end.to_h
+end
+
+def _load_config
+  base_path = Pathname(__FILE__).dirname.dirname
+  config_files = [
+    base_path + 'config.yml',
+    base_path + 'config.default.yml',
+  ]
+  config = YAML.load_file(config_files.find(&:exist?).to_s)
+  return _symbolify_keys(config)
+end
+
+CONFIG = _load_config
+KRPC_CONFIG = CONFIG[:krpc]
 
 class Kerbal
   include Singleton
@@ -165,7 +189,7 @@ class Kerbal
     end
 
     def run(block)
-      @client = KRPC.connect(name: @client_name, host: "omgwtfhax.wisq.org")
+      @client = KRPC.connect(name: @client_name, **KRPC_CONFIG)
       begin
         @space_center = @client.space_center
         @vessel = @space_center.active_vessel

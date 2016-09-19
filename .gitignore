@@ -1,4 +1,7 @@
 .bundle
+config.yml
+
+# Local junk:
 gem/
 mod/
 old/
