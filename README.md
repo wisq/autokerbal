@@ -22,11 +22,12 @@ That said, the scripts here are usable *right now*, and are being continuously i
 
 ### Prerequisites
 
-You'll need a working copy of Ruby.  There's plenty of ways to do that, but the one I use is https://github.com/rbenv/rbenv .
-
-You'll also need bundler.  If you've got a working Ruby, you should be able to just do `gem install bundler`.
-
-Finally, you'll need the [kRPC mod](https://krpc.github.io/krpc/) itself.  Follow the "Getting Started Guide" to install the mod.
+* You'll need a working copy of Ruby.  There's plenty of ways to do that, but the one I use is https://github.com/rbenv/rbenv .
+* You'll also need bundler.  If you've got a working Ruby, you should be able to just do `gem install bundler`.
+* Finally, you'll need the [kRPC mod](https://krpc.github.io/krpc/) itself.
+  * Follow the "Getting Started Guide" to install the mod.
+  * I highly recommend enabling "auto-accept new clients".  My scripts connect one client per thread, and that can get messy and cumbersome if you have to approve each one.
+  * Don't forget to start the server!  (I have "auto-start server" enabled.)
 
 ### Installation
 
@@ -36,8 +37,15 @@ Just run `bundle install` in this directory.  All the necessary Ruby gems will b
 
 Most of these scripts are standalone.  Just run them, e.g. `./burn.rb` to execute a burn.
 
-Some scripts may expect command-line arguments.  
+Some scripts may expect command-line arguments.  E.g. `target.rb` expects the name of a planet or ship.
 
 Some scripts reuse each other, e.g. (as of this writing) `launch.rb` uses `burn.rb` for the circularisation burn, `autostage.rb` for staging during launch, `descent.rb` for the automatic abort procedure, etc.
 
 I'll try to document things more in the future, but right now, I'm just hacking away at them.  Read the scripts themselves to get an idea of what they do.
+
+### Controlling KSP from a different computer
+
+Personally, I run Kerbal on my desktop (geared for gaming), and control it from my laptop (geared for development).  If you want to do a similar setup, you'll need to do two things:
+
+1. Set your IP address in the kRPC configuration (inside KSP) to the local network IP of your KSP computer.
+2. Copy the `config.yml.example` file to `config.yml` and edit it to point to that same IP.
