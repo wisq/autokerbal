@@ -113,14 +113,15 @@ Kerbal.thread 'launch' do
 
   found_engine = false
   current_stage = @control.current_stage
-  @vessel.parts.modules_with_name('ModuleEnginesFX').each do |mod|
-    if mod.has_event('Activate Engine') && mod.part.stage == current_stage
-      puts "Activating engine: #{mod.part.title}"
-      mod.trigger_event('Activate Engine')
-      found_engine = true
+  if @vessel.available_thrust == 0.0
+    @vessel.parts.modules_with_name('ModuleEnginesFX').each do |mod|
+      if mod.has_event('Activate Engine') && mod.part.stage == current_stage
+        puts "Activating engine: #{mod.part.title}"
+        mod.trigger_event('Activate Engine')
+      end
     end
+    @control.activate_next_stage unless found_engine
   end
-  @control.activate_next_stage unless found_engine
 
   @control.throttle = 1.0
 
