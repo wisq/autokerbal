@@ -25,6 +25,17 @@ Kerbal.thread 'burn' do
   @autopilot.stopping_time = [4.0, 4.0, 4.0]
   @autopilot.engage
   sleep(0.5)
+
+  # Automatically increase physics warp if the ship is slow to turn.
+  turning_factor = [0, 2].map do |dim| # dimension
+    @vessel.moment_of_inertia[dim] / @vessel.available_torque[dim]
+  end.max
+  puts "Turning factor: #{turning_factor}"
+  if turning_factor > 80
+    puts "Slow ship -- increasing physics warp to 4x."
+    @space_center.physics_warp_factor = 3
+  end
+
   success = autopilot_wait_until(burn_ut - BURN_EMERGENCY_GRACE)
   dewarp
 
@@ -99,7 +110,7 @@ Kerbal.thread 'burn' do
 
   @control.throttle = 0.0
   @autopilot.disengage
-  puts "Burn complete!"
+  puts "Burn complete!\007"
 end
 
 Kerbal.run
