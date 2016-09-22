@@ -46,17 +46,30 @@ Kerbal.thread 'landing' do
             speed = speed_stream.get
             altitude = altitude_stream.get
 
-            suicide_altitude = suicide_burn_altitude(speed, minimum_speed, mass, thrust, gravity)
+            if thrust == 0.0
+              puts "No thrust available!"
+              sleep(0.5)
+              next
+            end
 
             if state == :wait_horizontal_burn
-              target_altitude = suicide_altitude*2 + minimum_altitude
-              delta = altitude - target_altitude
-              puts "delta to horizontal burn: #{delta}"
+              # This function is slow, but it collects all relevant data
+              # at the start, so we offset it by how long it takes.
+              start = @space_center.ut
+              suicide_time = suicide_burn_time(@vessel, thrust, mass)
+              if suicide_time
+                elapsed = @space_center.ut - start
 
-              dewarp if delta < 100
-              if altitude <= target_altitude
-                puts "transition to horizontal burn"
-                state = :horizontal_burn
+                time_to_burn = suicide_time - elapsed
+                puts "seconds to suicide burn: #{time_to_burn}"
+
+                dewarp if time_to_burn < 50
+                if time_to_burn < 20
+                  puts "transition to horizontal burn"
+                  state = :horizontal_burn
+                end
+              else
+                puts "no predicted impact yet"
               end
             end
 
@@ -82,6 +95,7 @@ Kerbal.thread 'landing' do
                   @control.throttle = 0.0
                 end
               else
+                suicide_altitude = vertical_suicide_altitude(speed, minimum_speed, mass, thrust, gravity)
                 target_altitude = suicide_altitude + minimum_altitude
                 delta = altitude - target_altitude
 
@@ -112,7 +126,7 @@ Kerbal.thread 'landing' do
   end
 end
 
-def suicide_burn_altitude(current_speed, target_speed, vessel_mass, vessel_thrust, surface_gravity)
+def vertical_suicide_altitude(current_speed, target_speed, vessel_mass, vessel_thrust, surface_gravity)
   ship_acceleration = vessel_thrust / vessel_mass
   net_acceleration = ship_acceleration - surface_gravity
   # This uses the acceleration formula:
@@ -135,6 +149,54 @@ def desired_throttle(current_speed, desired_speed, vessel_mass, vessel_thrust, s
   desired_acceleration = current_speed - desired_speed
   total_acceleration = surface_gravity + desired_acceleration
   return total_acceleration / (@vessel.available_thrust / @vessel.mass)
+end
+
+def suicide_burn_time(vessel, vessel_thrust, vessel_mass)
+  time_to_impact, velocity_at_impact = time_and_velocity_to_impact(vessel)
+  return nil if time_to_impact.nil?
+  ship_acceleration = vessel_thrust / vessel_mass
+  time_to_zero = velocity_at_impact / ship_acceleration
+  return time_to_impact - time_to_zero
+end
+
+def time_and_velocity_to_impact(vessel)
+  body = vessel.orbit.body
+  ref_frame = body.non_rotating_reference_frame
+  position = Vector[*vessel.position(ref_frame)]
+  velocity = Vector[*vessel.velocity(ref_frame)]
+  grav_param = body.gravitational_parameter
+
+  start_position = position.dup
+  meridian = Vector[1, 0, 0] # 0 degrees longitude at the equator
+  equator_normal = Vector[0, 1, 0]
+
+  rotating_offset = body_rotating_frame_offset(body)
+  rotation_speed = rad2deg(body.rotational_speed)
+
+  1.upto(600) do |time|
+    # Calculate new position and velocity:
+    height = position.magnitude # from center of planet
+    gravity = grav_param / height**2
+    gravity_factor = height / gravity
+    gravity_vector = Vector[*(0..2).map { |i| -position[i] / gravity_factor }]
+    velocity += gravity_vector
+    position += velocity
+
+    # Calculate lat and long for position:
+    latitude  = angle_between_vector_and_plane(position, equator_normal)
+    longitude = angle_between(meridian, Vector[position[0], 0, position[2]])
+    longitude += rotating_offset + (rotation_speed * time)
+    # longitude can be 360 degrees off (or more); surface_height can handle it
+
+    # Is new position underground?
+    surface_height = Vector[*body.surface_position(latitude, longitude, ref_frame)].magnitude
+    if height <= surface_height
+      return [time, velocity.magnitude]
+    end
+  end
+
+  # Unknown or no time to impact
+  return nil
 end
 
 Kerbal.run
