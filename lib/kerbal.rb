@@ -276,5 +276,26 @@ class Kerbal
     def rad2deg(rad)
       return rad * 180 / Math::PI
     end
+
+    def angle_between(v1, v2)
+      angle = rad2deg(v1.angle_with(v2))
+      angle = -angle if v2[2] < v1[2]
+      return angle
+    end
+
+    def angle_between_vector_and_plane(vector, normal)
+      dp = vector.dot(normal)
+      return 0 if dp == 0
+      vm = vector.magnitude
+      nm = normal.magnitude
+      return Math.asin(dp / (vm*nm)) * (180.0 / Math::PI)
+    end
+
+    def body_rotating_frame_offset(body) # (right now)
+      offset = Vector[*@space_center.transform_position(
+        [1, 0, 0], body.reference_frame, body.non_rotating_reference_frame)]
+      meridian = Vector[1, 0, 0]
+      return angle_between(meridian, offset)
+    end
   end
 end

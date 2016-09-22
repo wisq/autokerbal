@@ -352,11 +352,7 @@ def time_to_longitude(target)
   flight = @vessel.flight(body.non_rotating_reference_frame)
 
   # Get the angle of the planet relative to its fixed, non-rotating plane.
-  offset = Vector[*@space_center.transform_position(
-    [1, 0, 0], body.reference_frame, body.non_rotating_reference_frame)]
-  north = Vector[1, 0, 0]
-  angle = rad2deg(north.angle_with(offset))
-  angle = -angle if offset[2] < 0
+  angle = body_rotating_frame_offset(body)
 
   # Add that to our current longitude to get our non-rotated longitude
   current = (angle + flight.longitude) % 360
