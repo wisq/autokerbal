@@ -10,7 +10,10 @@ WAIT_ALLOW_INVERTED = true  # allow launching at descending node, if sooner
 
 HEADING = 90  # degrees on compass (if no target selected)
 INITIAL_SPEED = 50  # speed to begin gravity turn
-INITIAL_PITCH = 80  # pitch for initial gravity turn
+INITIAL_PITCH = {
+  true  => 75,  # pitch for initial gravity turn if atmosphere present
+  false => 30,  # pitch for initial gravity turn if in vacuum
+}
 ASCENT_AOA = 3  # angle of attack during ascent
 ORBIT_ALTITUDE = 100000   # target orbit altitude
 
@@ -136,8 +139,9 @@ Kerbal.thread 'launch' do
     end
   end
 
-  puts "Initial vertical ascent complete.  Tilting to #{INITIAL_PITCH} ..."
-  @autopilot.target_pitch = INITIAL_PITCH
+  initial_pitch = INITIAL_PITCH[@vessel.orbit.body.has_atmosphere]
+  puts "Initial vertical ascent complete.  Tilting to #{initial_pitch} ..."
+  @autopilot.target_pitch = initial_pitch
 
   with_stream(surface_flight.pitch_stream) do |surface_pitch_stream|
     with_stream(svel_flight.pitch_stream) do |svel_pitch_stream|
@@ -149,7 +153,7 @@ Kerbal.thread 'launch' do
         svel_pitch = current_pitch - svel_pitch_stream.get
         target_pitch = svel_pitch + ASCENT_AOA
 
-        if waiting && target_pitch <= INITIAL_PITCH
+        if waiting && target_pitch <= initial_pitch
           puts "Maintaining #{ASCENT_AOA} degrees AoA for ascent."
           puts "Waiting for #{ORBIT_ALTITUDE}m apoapsis ..."
           waiting = false
