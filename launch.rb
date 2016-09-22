@@ -199,7 +199,6 @@ end
 
 Kerbal.thread 'circular', paused: true do
   body = @vessel.orbit.body
-  surface_height = body.equatorial_radius
   atmosphere_depth = body.atmosphere_depth
 
   Kerbal.kill_thread('launch_abort')
@@ -211,11 +210,11 @@ Kerbal.thread 'circular', paused: true do
   puts "ERROR: Burn failed!" unless Kerbal.run_thread('burn')
 
   puts
-  puts "Periapsis: #{(@vessel.orbit.periapsis - surface_height).to_i}m"
-  puts "Apoapsis:  #{(@vessel.orbit.apoapsis - surface_height).to_i}m"
+  puts "Periapsis: #{@vessel.orbit.periapsis_altitude.to_i}m"
+  puts "Apoapsis:  #{@vessel.orbit.apoapsis_altitude.to_i}m"
   puts
 
-  if @vessel.orbit.periapsis < (atmosphere_depth + surface_height)
+  if @vessel.orbit.periapsis_altitude < atmosphere_depth
     puts "WARNING: Ship is still sub-orbital!"
     puts "Waiting for reentry."
   else
