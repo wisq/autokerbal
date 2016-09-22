@@ -248,6 +248,7 @@ Kerbal.thread 'heat_limiter', paused: true do
         @control.throttle = 1.0
         throttled = false
       else
+        @control.throttle = 1.0
         sleep(0.5)
       end
     end
