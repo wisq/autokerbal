@@ -201,11 +201,12 @@ class Kerbal
       end
     end
 
-    def with_stream(stream)
-      yield stream
+    def with_streams(*streams)
+      yield *streams
     ensure
-      stream.remove
+      streams.each(&:remove)
     end
+    alias :with_stream :with_streams
 
     def dewarp
       warp_mode = @space_center.warp_mode

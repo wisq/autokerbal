@@ -8,7 +8,7 @@ FLYING_STATES = Set.new [:flying, :orbiting, :escaping, :sub_orbital]
 
 WAIT_ALLOW_INVERTED = true  # allow launching at descending node, if sooner
 
-HEADING = 90  # degrees on compass (if no target selected)
+INCLINATION = 0  # will match target inclination if target selected
 INITIAL_SPEED = 50  # speed to begin gravity turn
 INITIAL_PITCH = {
   true  => 75,  # pitch for initial gravity turn if atmosphere present
@@ -38,7 +38,7 @@ Kerbal.thread 'launch' do
     mod.trigger_event('Start Pumping Fuel')
   end
 
-  initial_heading = HEADING
+  target_inclination = INCLINATION
   target = @space_center.target_body || @space_center.target_vessel
   # Orbit inclination is supposed to be returned as radians,
   # but the current version converts the wrong way (rad2deg).
@@ -46,9 +46,8 @@ Kerbal.thread 'launch' do
   # FIXME: Change this to rad2deg once the bug is fixed.
   target_inclination = deg2rad(target.orbit.inclination) if target
 
-  if target && target_inclination > 0.5
+  if target && target_inclination >= 0.1
     target_longitude = rad2deg(target.orbit.longitude_of_ascending_node)
-    initial_heading = HEADING - target_inclination
 
     puts "Target: #{target.name}"
     puts "Inclination: #{target_inclination}"
@@ -68,7 +67,7 @@ Kerbal.thread 'launch' do
       puts "Will launch at descending node instead (#{target_longitude} degrees)."
       degrees_needed, time = time_to_longitude(target_longitude)
 
-      initial_heading = HEADING + target_inclination
+      target_inclination = -target_inclination
 
       puts
       puts "Degrees until longitude: #{degrees_needed}"
@@ -103,7 +102,7 @@ Kerbal.thread 'launch' do
   @control.throttle = 0.0
 
   @autopilot.stopping_time = [0.5, 0.5, 0.5] # the default
-  @autopilot.target_heading = initial_heading
+  @autopilot.target_heading = inclination_to_heading(target_inclination)
   @autopilot.target_pitch = 90
   @autopilot.target_roll = 0
   @autopilot.engage
@@ -143,32 +142,82 @@ Kerbal.thread 'launch' do
   puts "Initial vertical ascent complete.  Tilting to #{initial_pitch} ..."
   @autopilot.target_pitch = initial_pitch
 
-  with_stream(surface_flight.pitch_stream) do |surface_pitch_stream|
-    with_stream(svel_flight.pitch_stream) do |svel_pitch_stream|
-      puts "Waiting for #{ASCENT_AOA} degrees AoA ..."
-      waiting = true
+  last_latitude = nil
+  with_streams(
+    surface_flight.pitch_stream,
+    surface_flight.latitude_stream,
+    svel_flight.pitch_stream,
+    @vessel.orbit.inclination_stream,
+  ) do |
+    surface_pitch_stream,
+    latitude_stream,
+    svel_pitch_stream,
+    inclination_stream,
+  |
+    puts "Waiting for #{ASCENT_AOA} degrees AoA ..."
+    waiting = true
 
-      loop do
-        current_pitch = surface_pitch_stream.get
-        svel_pitch = current_pitch - svel_pitch_stream.get
-        target_pitch = svel_pitch + ASCENT_AOA
+    loop do
+      current_pitch = surface_pitch_stream.get
+      svel_pitch = current_pitch - svel_pitch_stream.get
+      target_pitch = svel_pitch + ASCENT_AOA
 
-        if waiting && target_pitch <= initial_pitch
-          puts "Maintaining #{ASCENT_AOA} degrees AoA for ascent."
-          puts "Waiting for #{ORBIT_ALTITUDE}m apoapsis ..."
-          waiting = false
-        end
-
-        unless waiting
-          @autopilot.target_pitch = target_pitch
-          @autopilot.target_heading = initial_heading
-          @autopilot.engage
-        end
-
-        sleep_ut(0.1)
+      if waiting && target_pitch <= initial_pitch
+        puts "Maintaining #{ASCENT_AOA} degrees AoA for ascent."
+        puts "Waiting for #{ORBIT_ALTITUDE}m apoapsis ..."
+        waiting = false
       end
+
+      latitude = latitude_stream.get
+      if last_latitude
+        latitude_change = latitude - last_latitude
+        # Inclination is supposed to be in radians,
+        # but is actually in rad2deg(degrees).
+        # A single deg2rad will solve this, but
+        # this will eventually need to be rad2deg.
+        inclination = deg2rad(inclination_stream.get)
+        @autopilot.target_heading = target_heading = corrective_steering(
+          target_inclination,
+          inclination,
+          latitude_change,
+        )
+        puts "Inclination: #{inclination}, lat #{latitude_change} ... corrective steering: #{target_heading}"
+      end
+      last_latitude = latitude
+
+      unless waiting
+        @autopilot.target_pitch = target_pitch
+        @autopilot.engage
+      end
+
+      sleep_ut(0.1)
     end
   end
+end
+
+def inclination_to_heading(inc)
+  # Although in real life, inclination is always positive,
+  # we will use a negative inclination to indicate
+  # that we should be turning south instead of north.
+  return 90.0 - inc
+end
+
+def corrective_steering(target_inc, current_inc, latitude_change)
+  # target_inc is positive if we should go north, negative if south.
+  # current_inc always starts positive, so give it the "correct" sign.
+  moving_north = latitude_change.positive?
+  # positive if north, negative if south
+  current_inc = -current_inc if !moving_north
+
+  inclination_error = (target_inc - current_inc).abs
+  return if inclination_error < 0.05
+
+  # Scale our turn up to 5 degrees if we are 1 degree off target_inc.
+  degrees_turn_clockwise = [inclination_error * 5.0, 5.0].min # clockwise = south
+  # Switch to north turn if target inclination is more northern.
+  degrees_turn_clockwise = -degrees_turn_clockwise if target_inc > current_inc
+
+  return inclination_to_heading(target_inc) + degrees_turn_clockwise
 end
 
 Kerbal.thread 'apoapsis', paused: true do
