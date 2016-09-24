@@ -28,7 +28,7 @@ Kerbal.thread 'landing' do
   gravity = @vessel.orbit.body.surface_gravity
 
   time_to_land = 10.0
-  minimum_speed = 5.0
+  minimum_speed = 3.0
   state = :wait_horizontal_burn
 
   minimum_altitude = time_to_land * minimum_speed
@@ -193,7 +193,7 @@ def time_and_velocity_to_impact(vessel, altitude_margin)
     # Is new position underground?
     surface_height = Vector[*body.surface_position(latitude, longitude, ref_frame)].magnitude
     if height <= (surface_height + altitude_margin)
-      p [latitude, longitude]
+      #p [latitude, longitude]
       return [time, velocity.magnitude]
     end
   end
