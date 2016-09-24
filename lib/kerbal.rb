@@ -238,7 +238,7 @@ class Kerbal
       return burn_time
     end
 
-    def autopilot_wait_until(cutoff_ut, max_error: 0.5, min_time: 2.0)
+    def autopilot_wait_until(cutoff_ut, max_error: 1.0, min_time: 2.0)
       with_stream(@autopilot.error_stream) do |error_stream|
         with_stream(@space_center.ut_stream) do |ut_stream|
           on_target_until = nil
