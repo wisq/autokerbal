@@ -3,6 +3,8 @@
 $LOAD_PATH << File.join(File.dirname($0), 'lib')
 require 'kerbal'
 
+HORIZONTAL_ALTITUDE_MARGIN = 100 # height (m) above surface at which to do horizontal burn
+
 Kerbal.thread 'landing' do
   dewarp
   @space_center.save('prelanding')
@@ -56,15 +58,15 @@ Kerbal.thread 'landing' do
               # This function is slow, but it collects all relevant data
               # at the start, so we offset it by how long it takes.
               start = @space_center.ut
-              suicide_time = suicide_burn_time(@vessel, thrust, mass)
+              suicide_time = suicide_burn_time(@vessel, thrust, mass, HORIZONTAL_ALTITUDE_MARGIN)
               if suicide_time
                 elapsed = @space_center.ut - start
 
                 time_to_burn = suicide_time - elapsed
                 puts "seconds to suicide burn: #{time_to_burn}"
 
-                dewarp if time_to_burn < 50
-                if time_to_burn < 20
+                dewarp if time_to_burn < 30
+                if time_to_burn < 1
                   puts "transition to horizontal burn"
                   state = :horizontal_burn
                 end
@@ -151,15 +153,15 @@ def desired_throttle(current_speed, desired_speed, vessel_mass, vessel_thrust, s
   return total_acceleration / (@vessel.available_thrust / @vessel.mass)
 end
 
-def suicide_burn_time(vessel, vessel_thrust, vessel_mass)
-  time_to_impact, velocity_at_impact = time_and_velocity_to_impact(vessel)
+def suicide_burn_time(vessel, vessel_thrust, vessel_mass, altitude_margin)
+  time_to_impact, velocity_at_impact = time_and_velocity_to_impact(vessel, altitude_margin)
   return nil if time_to_impact.nil?
   ship_acceleration = vessel_thrust / vessel_mass
   time_to_zero = velocity_at_impact / ship_acceleration
   return time_to_impact - time_to_zero
 end
 
-def time_and_velocity_to_impact(vessel)
+def time_and_velocity_to_impact(vessel, altitude_margin)
   body = vessel.orbit.body
   ref_frame = body.non_rotating_reference_frame
   position = Vector[*vessel.position(ref_frame)]
@@ -185,12 +187,13 @@ def time_and_velocity_to_impact(vessel)
     # Calculate lat and long for position:
     latitude  = angle_between_vector_and_plane(position, equator_normal)
     longitude = angle_between(meridian, Vector[position[0], 0, position[2]])
-    longitude += rotating_offset + (rotation_speed * time)
+    longitude += rotating_offset - (rotation_speed * time)
     # longitude can be 360 degrees off (or more); surface_height can handle it
 
     # Is new position underground?
     surface_height = Vector[*body.surface_position(latitude, longitude, ref_frame)].magnitude
-    if height <= surface_height
+    if height <= (surface_height + altitude_margin)
+      p [latitude, longitude]
       return [time, velocity.magnitude]
     end
   end
