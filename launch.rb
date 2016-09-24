@@ -243,6 +243,7 @@ Kerbal.thread 'apoapsis', paused: true do
 
   puts "Now in space!"
   Kerbal.kill_thread('launch')
+  Kerbal.start_thread('solar_panels')
   Kerbal.start_thread('circular')
 end
 
@@ -364,6 +365,17 @@ Kerbal.thread 'launch_abort', paused: true do
   Kerbal.start_thread('descent')
 end
 
+Kerbal.thread 'solar_panels', paused: true do
+  action = 'Extend Panels'
+  modules = @vessel.parts.all.map do |part|
+    part.modules.select { |mod| mod.has_event(action) }
+  end.flatten(1)
+
+  modules.each do |mod|
+    puts "Extending solar panels: #{mod.part.title}"
+    mod.trigger_event(action)
+  end
+end
 
 Kerbal.load_file('descent.rb')
 Kerbal.load_file('burn.rb')
