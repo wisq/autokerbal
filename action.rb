@@ -14,5 +14,3 @@ Kerbal.execute 'action' do
     mod.trigger_event(action)
   end
 end
-
-Kerbal.run
