@@ -5,8 +5,11 @@ require 'kerbal'
 
 BURN_GRACE = 5  # come out of warp 5 seconds before burn
 BURN_EMERGENCY_GRACE = 10  # prompt for emergency burn at this point
+BURN_ACCURACY = 0.05  # remaining delta-v to consider burn complete
 
 Kerbal.thread 'burn' do
+  dewarp
+
   puts "Finding node ..."
   burn_node = @control.nodes.first
   raise "No nodes" unless burn_node
@@ -46,6 +49,9 @@ Kerbal.thread 'burn' do
     if time_to_burn > 10
       puts "Warping ..."
       @space_center.warp_to(burn_ut - BURN_GRACE)
+
+      time_to_burn = burn_ut - @space_center.ut
+      puts "Warp complete.  Burn now in #{time_to_burn} seconds."
     end
 
     with_stream(@space_center.ut_stream) do |ut|
@@ -77,7 +83,7 @@ Kerbal.thread 'burn' do
     @autopilot.target_direction = vector
 
     delta_v = burn_node.remaining_delta_v
-    break if delta_v < 0.1
+    break if delta_v < BURN_ACCURACY
     throttle = 1.0
 
     remaining_burn = calculate_time_for_burn(delta_v)
@@ -91,8 +97,11 @@ Kerbal.thread 'burn' do
     end
 
     if remaining_burn < 1.0
-      puts "Fine-tuning burn ..." unless fine_tuning
-      fine_tuning = true
+      unless fine_tuning
+        dewarp
+        puts "Fine-tuning burn ..."
+        fine_tuning = true
+      end
       throttle /= (1.1 / remaining_burn)
     end
 
