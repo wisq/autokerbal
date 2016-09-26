@@ -243,7 +243,7 @@ class Kerbal
         with_stream(@space_center.ut_stream) do |ut_stream|
           on_target_until = nil
           loop do
-            error = error_stream.get
+            error = error_stream.get.abs
             ut = ut_stream.get
 
             dewarp if error <= (max_error * 2)
