@@ -59,7 +59,7 @@ Kerbal.thread 'launch' do
     puts
     puts "Degrees until longitude: #{degrees_needed}"
     puts "Time until longitude: #{time} seconds"
-    puts "Launch heading: #{initial_heading}"
+    puts "Launch inclination: #{target_inclination}"
     puts
 
     if degrees_needed > 180 && WAIT_ALLOW_INVERTED
@@ -72,7 +72,7 @@ Kerbal.thread 'launch' do
       puts
       puts "Degrees until longitude: #{degrees_needed}"
       puts "Time until longitude: #{time} seconds"
-      puts "Launch heading: #{initial_heading}"
+      puts "Launch inclination: #{target_inclination}"
       puts
     end
 
@@ -210,14 +210,15 @@ def corrective_steering(target_inc, current_inc, latitude_change)
   current_inc = -current_inc if !moving_north
 
   inclination_error = (target_inc - current_inc).abs
-  return if inclination_error < 0.05
+  base_heading = inclination_to_heading(target_inc)
+  return base_heading if inclination_error < 0.05
 
   # Scale our turn up to 5 degrees if we are 1 degree off target_inc.
   degrees_turn_clockwise = [inclination_error * 5.0, 5.0].min # clockwise = south
   # Switch to north turn if target inclination is more northern.
   degrees_turn_clockwise = -degrees_turn_clockwise if target_inc > current_inc
 
-  return inclination_to_heading(target_inc) + degrees_turn_clockwise
+  return base_heading + degrees_turn_clockwise
 end
 
 Kerbal.thread 'apoapsis', paused: true do
