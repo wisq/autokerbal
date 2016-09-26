@@ -63,7 +63,7 @@ Kerbal.thread 'landing' do
                 elapsed = @space_center.ut - start
 
                 time_to_burn = suicide_time - elapsed
-                puts "seconds to suicide burn: #{time_to_burn}"
+                puts "seconds to horizontal burn: #{time_to_burn}"
 
                 dewarp if time_to_burn < 30
                 if time_to_burn < 1
