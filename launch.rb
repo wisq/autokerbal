@@ -244,7 +244,7 @@ Kerbal.thread 'apoapsis', paused: true do
 
   puts "Now in space!"
   Kerbal.kill_thread('launch')
-  Kerbal.start_thread('solar_panels')
+  Kerbal.start_thread('in_vacuum')
   Kerbal.start_thread('circular')
 end
 
@@ -366,7 +366,15 @@ Kerbal.thread 'launch_abort', paused: true do
   Kerbal.start_thread('descent')
 end
 
-Kerbal.thread 'solar_panels', paused: true do
+Kerbal.thread 'in_vacuum', paused: true do
+  @vessel.parts.modules_with_name('ProceduralFairingDecoupler').each do |mod|
+    if mod.has_event('Jettison')
+      puts "Jettisoning fairing: #{mod.part.title}"
+      mod.trigger_event('Jettison')
+    end
+  end
+  sleep(5)
+
   action = 'Extend Panels'
   modules = @vessel.parts.all.map do |part|
     part.modules.select { |mod| mod.has_event(action) }
