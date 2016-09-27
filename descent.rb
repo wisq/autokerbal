@@ -34,9 +34,13 @@ Kerbal.thread 'descent', paused: true do
   decouplers = @vessel.parts.modules_with_name('ModuleDecouple')
   decouplers.sort_by { |m| m.part.stage }.each do |mod|
     if mod.has_event('Decouple')
-      puts "Decoupling: #{mod.part.title}"
-      mod.trigger_event('Decouple')
-      sleep(0.2)
+      if mod.part.modules.any? { |m| m.name == 'ModuleHeatShield' }
+        puts "NOT decoupling: #{mod.part.title}"
+      else
+        puts "Decoupling: #{mod.part.title}"
+        mod.trigger_event('Decouple')
+        sleep(0.2)
+      end
     end
   end
 
