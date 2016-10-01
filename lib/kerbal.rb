@@ -298,5 +298,37 @@ class Kerbal
       meridian = Vector[1, 0, 0]
       return angle_between(meridian, offset)
     end
+
+    # Based on http://space.stackexchange.com/questions/8911/determining-orbital-position-at-a-future-point-in-time
+    def relative_orbit_position_at_time(orbit, time_ut)
+      a = orbit.semi_major_axis
+      e = orbit.eccentricity
+      i = orbit.inclination
+      w = orbit.argument_of_periapsis
+      _W = orbit.longitude_of_ascending_node
+      _E = orbit.eccentric_anomaly_at_ut(time_ut)
+
+      # "P and Q form a 2d coordinate system in the plane of the orbit, with +P pointing towards periapsis."
+      _P = a * (Math.cos(_E) - e)
+      _Q = a * Math.sin(_E) * Math.sqrt(1 - e**2)
+
+      # "rotate these coordinates into the full 3d coordinate system"
+      # rotate by argument of periapsis
+      x = Math.cos(w) * _P - Math.sin(w) * _Q
+      y = Math.sin(w) * _P + Math.cos(w) * _Q
+      # rotate by inclination
+      # NOTE: Reference page rotates around y axis;
+      #       here, I'm rotating around x axis instead.
+      z = Math.sin(i) * y
+      y = Math.cos(i) * y
+      # rotate by longitude of ascending node
+      xtemp = x
+      x = Math.cos(_W) * xtemp - Math.sin(_W) * y
+      y = Math.sin(_W) * xtemp + Math.cos(_W) * y
+
+      # Our coordinate system uses z as the vertical coord,
+      # but Kerbal uses y, so swap z and y.
+      return [x, z, y]
+    end
   end
 end
