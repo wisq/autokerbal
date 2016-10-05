@@ -9,6 +9,7 @@ BURN_ACCURACY = 0.05  # remaining delta-v to consider burn complete
 
 Kerbal.thread 'burn' do
   dewarp
+  @space_center.save('preburn')
 
   puts "Finding node ..."
   burn_node = @control.nodes.first
