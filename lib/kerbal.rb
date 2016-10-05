@@ -301,11 +301,14 @@ class Kerbal
 
     # Based on http://space.stackexchange.com/questions/8911/determining-orbital-position-at-a-future-point-in-time
     def relative_orbit_position_at_time(orbit, time_ut)
+      # These define the raw shape of the orbit:
       a = orbit.semi_major_axis
       e = orbit.eccentricity
+      # These define the rotation:
       i = orbit.inclination
       w = orbit.argument_of_periapsis
       _W = orbit.longitude_of_ascending_node
+      # This is the offset of the ship along the orbit:
       _E = orbit.eccentric_anomaly_at_ut(time_ut)
 
       # "P and Q form a 2d coordinate system in the plane of the orbit, with +P pointing towards periapsis."
