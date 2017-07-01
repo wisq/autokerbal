@@ -36,7 +36,13 @@ Kerbal.thread 'docking' do
 
   closing_stage = false
 
-  until target.state == :docking do
+  wait_for_state = :docking
+  if target.state == :docking
+    puts "Target port reports docking already. :(\nWaiting for docked instead."
+    wait_for_state = :docked
+  end
+
+  until target.state == wait_for_state do
     @control.rcs = true
     position = Vector[*target.position(our_port.reference_frame)]
     velocity = Vector[*target_vessel.velocity(our_port.reference_frame)]
@@ -101,9 +107,11 @@ Kerbal.thread 'docking' do
   @control.forward = 0.0
   @control.rcs = false
 
-  puts "In range of docking port, waiting for docking."
-  while target.state == :docking
-    sleep(0.2)
+  if target.state == :docking
+    puts "In range of docking port, waiting for docking."
+    while target.state == :docking
+      sleep(0.2)
+    end
   end
 
   @autopilot.disengage

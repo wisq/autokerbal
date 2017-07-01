@@ -31,6 +31,10 @@ Kerbal.thread 'match_velocity' do
   time_of_burn = closest_time - (burn_time / 2.0)
 
   if time_of_burn - now > 180.0
+    5.downto(1) do |n|
+      puts "Warping in #{n} ...\007"
+      sleep(1)
+    end
     puts "Warping ..."
     @space_center.warp_to(time_of_burn - 120)
   end
