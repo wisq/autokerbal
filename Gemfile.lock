@@ -1,36 +1,39 @@
 GIT
   remote: git://github.com/TeWu/krpc-rb.git
-  revision: ed42974b66160be2af83af0a1e78a9da6f6b356c
+  revision: 28c7ecc92354513e6f65d2e47965a6400b3ef4ac
   specs:
     krpc (0.3.1)
       colorize (~> 0.7)
-      google-protobuf (~> 3.0.0.alpha.5)
+      google-protobuf (~> 3.2)
       hanna-nouveau (~> 0.4)
       nokogiri (~> 1.6)
+
+GIT
+  remote: git://github.com/wisq/ruby-mpd.git
+  revision: a646cb71ca92e59303768366014a04bca6d42298
+  ref: a646cb71ca92e59303768366014a04bca6d42298
+  specs:
+    ruby-mpd (0.3.4)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    coderay (1.1.0)
+    coderay (1.1.1)
     colorize (0.8.1)
-    google-protobuf (3.0.0)
+    google-protobuf (3.3.0)
     haml (3.0.25)
     hanna-nouveau (0.4.2)
       haml (= 3.0.25)
       rdoc (~> 4.0)
-    json (1.8.3)
     method_source (0.8.2)
-    mini_portile2 (2.1.0)
-    nokogiri (1.6.8)
-      mini_portile2 (~> 2.1.0)
-      pkg-config (~> 1.1.7)
-    pkg-config (1.1.7)
-    pry (0.10.1)
+    mini_portile2 (2.2.0)
+    nokogiri (1.8.0)
+      mini_portile2 (~> 2.2.0)
+    pry (0.10.4)
       coderay (~> 1.1.0)
       method_source (~> 0.8.1)
       slop (~> 3.4)
-    rdoc (4.2.2)
-      json (~> 1.4)
+    rdoc (4.3.0)
     slop (3.6.0)
 
 PLATFORMS
@@ -39,6 +42,7 @@ PLATFORMS
 DEPENDENCIES
   krpc!
   pry
+  ruby-mpd!
 
 BUNDLED WITH
    1.12.0
