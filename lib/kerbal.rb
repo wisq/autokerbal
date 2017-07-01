@@ -43,8 +43,8 @@ class Kerbal
     @loading_file = false
   end
 
-  def define(name, block)
-    @definitions[name] = block
+  def define(name, block, **kwargs)
+    @definitions[name] = [block, kwargs]
   end
 
   def start_or_queue(name)
@@ -61,13 +61,13 @@ class Kerbal
   end
 
   def start_thread(name)
-    block = @definitions[name]
+    block, kwargs = @definitions[name]
     raise "Thread definition not found: #{name}" unless block
 
     puts "Starting thread: #{name}"
     @running[name] = Thread.new do
       begin
-        retval = KerbalThread.new(name).run(block)
+        retval = KerbalThread.new(name, **kwargs).run(block)
         @exit_status[name] = [:exit, retval]
         puts "Thread complete: #{name}"
       rescue ThreadKilled => e
@@ -84,8 +84,8 @@ class Kerbal
     end
   end
 
-  def self.thread(name, paused: false, &block)
-    instance.define(name, block)
+  def self.thread(name, paused: false, **kwargs, &block)
+    instance.define(name, block, **kwargs)
     start_thread(name) unless paused || instance.loading_file?
   end
 
@@ -184,17 +184,20 @@ class Kerbal
   end
 
   class KerbalThread
-    def initialize(name)
+    def initialize(name, with_vessel: true)
       @client_name = name
+      @with_vessel = with_vessel
     end
 
     def run(block)
       @client = KRPC.connect(name: @client_name, **KRPC_CONFIG)
       begin
         @space_center = @client.space_center
-        @vessel = @space_center.active_vessel
-        @control = @vessel.control
-        @autopilot = @vessel.auto_pilot
+        if @with_vessel
+          @vessel = @space_center.active_vessel
+          @control = @vessel.control
+          @autopilot = @vessel.auto_pilot
+        end
         instance_eval(&block)
       ensure
         @client.close if @client
